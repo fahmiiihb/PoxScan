@@ -1,4 +1,0 @@
-#Wed May 29 23:08:55 ICT 2024
-base.0=C\:\\Users\\Fadil\\AndroidStudioProjects\\dos\\android\\app\\build\\intermediates\\dex\\debug\\mergeDexDebug\\classes.dex
-path.0=classes.dex
-renamed.0=classes.dex
