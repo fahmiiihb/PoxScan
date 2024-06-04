@@ -1,0 +1,109 @@
+pip install tensorflow
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Membuat ImageDataGenerator untuk data latih dan validasi
+datagen = ImageDataGenerator(
+    rescale=1./255,  # Normalisasi nilai piksel ke rentang [0, 1]
+    validation_split=0.2  # Memisahkan 20% data untuk validasi
+)
+
+# Data generator untuk training
+train_generator = datagen.flow_from_directory(
+    'mentah',
+    target_size=(224, 224),  # Mengubah ukuran gambar menjadi 224x224
+    batch_size=32,  # Ukuran batch
+    class_mode='categorical',  # Karena kita memiliki beberapa kelas (measles, monkeypox, normal, chickenpox)
+    subset='training'  # Menggunakan subset data training
+)
+
+# Data generator untuk validation
+validation_generator = datagen.flow_from_directory(
+    'mentah',
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical',
+    subset='validation'  # Menggunakan subset data validation
+)
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten, Dropout
+
+# Menggunakan VGG16 pre-trained model tanpa bagian atas (include_top=False)
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+
+# Membuat model sequential
+model = Sequential()
+model.add(base_model)  # Menambahkan base model VGG16
+model.add(Flatten())  # Menambahkan layer flatten
+model.add(Dense(256, activation='relu'))  # Menambahkan fully connected layer dengan 256 neuron
+model.add(Dropout(0.5))  # Menambahkan dropout untuk mengurangi overfitting
+model.add(Dense(4, activation='softmax'))  # Menambahkan output layer dengan 4 neuron (untuk 4 kelas)
+
+# Compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# Melatih model
+history = model.fit(
+    train_generator,
+    epochs=10,  # Jumlah epoch
+    validation_data=validation_generator
+)
+# Menyimpan model yang telah dilatih
+model.save('skin_disease_classifier.h5')
+print("Model telah disimpan sebagai 'skin_disease_classifier.h5'")
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Membuat ImageDataGenerator untuk data uji dengan rescaling
+test_datagen = ImageDataGenerator(rescale=1./255)
+
+# Data generator untuk testing
+test_generator = test_datagen.flow_from_directory(
+    'test',
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical',
+    shuffle=False  # Tidak mengacak data uji
+)
+from tensorflow.keras.models import load_model
+
+# Memuat model yang telah dilatih
+model = load_model('skin_disease_classifier.h5')
+
+# Evaluasi model menggunakan data uji
+loss, accuracy = model.evaluate(test_generator)
+print(f'Test loss: {loss}')
+print(f'Test accuracy: {accuracy}')
+import requests
+from PIL import Image
+from io import BytesIO
+
+def load_image_from_url(url):
+    response = requests.get(url)
+    img = Image.open(BytesIO(response.content))
+    # Lakukan preprocessing jika diperlukan
+    return img
+from tensorflow.keras.applications.vgg16 import preprocess_input
+
+def prepare_image(image):
+    # Ubah ukuran gambar sesuai dengan kebutuhan model
+    image = image.resize((224, 224))
+    # Normalisasi gambar
+    image = preprocess_input(np.array(image))
+    return image
+# Memuat model
+model = load_model('skin_disease_classifier.h5')
+
+# Memanggil gambar dari URL
+url = "https://tse4.mm.bing.net/th?id=OIP.RnfUnYr2AUvaZ6QJRoXvLQHaEK&pid=Api&P=0&h=180"
+image = load_image_from_url(url)
+
+# Persiapkan gambar untuk prediksi
+image = prepare_image(image)
+
+# Lakukan prediksi
+predictions = model.predict(np.expand_dims(image, axis=0))
+# Mendapatkan label kelas dengan probabilitas tertinggi
+predicted_class = np.argmax(predictions, axis=1)
+class_labels = ['measles', 'monkeypox', 'normal', 'chickenpox']
+predicted_label = class_labels[predicted_class[0]]
+print(f'Predicted label: {predicted_label}')
+
