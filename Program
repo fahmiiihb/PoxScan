@@ -7,6 +7,7 @@ datagen = ImageDataGenerator(
     validation_split=0.2  # Memisahkan 20% data untuk validasi
 )
 
+
 # Data generator untuk training
 train_generator = datagen.flow_from_directory(
     'mentah',
