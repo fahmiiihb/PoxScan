@@ -4,11 +4,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'disease_detail_screen.dart';
+import 'overview_page.dart'; // Import the Overview Page
 
 class ImageUploadScreen extends StatefulWidget {
   final bool fromCamera;
 
-  ImageUploadScreen({required this.fromCamera});
+  const ImageUploadScreen({Key? key, required this.fromCamera}) : super(key: key);
 
   @override
   _ImageUploadScreenState createState() => _ImageUploadScreenState();
@@ -17,6 +18,7 @@ class ImageUploadScreen extends StatefulWidget {
 class _ImageUploadScreenState extends State<ImageUploadScreen> {
   File? _image;
   final picker = ImagePicker();
+  bool _isLoading = false;
   String _classificationResult = '';
   List<dynamic> _diseases = [];
 
@@ -52,8 +54,11 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
   Future classifyImage() async {
     if (_image == null) return;
 
-    // Assuming your API endpoint is /classify and accepts a POST request with an image file
-    final request = http.MultipartRequest('POST', Uri.parse('https://api.yourbackend.com/classify'));
+    setState(() {
+      _isLoading = true;
+    });
+
+    final request = http.MultipartRequest('POST', Uri.parse('https://api'));
     request.files.add(await http.MultipartFile.fromPath('image', _image!.path));
     final response = await request.send();
 
@@ -63,8 +68,19 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
 
       setState(() {
         _classificationResult = result['classification'];
+        _isLoading = false;
       });
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OverviewPage(classification: _classificationResult, image: _image!),
+        ),
+      );
     } else {
+      setState(() {
+        _isLoading = false;
+      });
       throw Exception('Failed to classify image');
     }
   }
@@ -73,40 +89,46 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Upload Image'),
+        title: const Text('Upload Image'),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _image == null ? Text('No image selected.') : Image.file(_image!),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: classifyImage,
-              child: Text('Classify Image'),
-            ),
-            SizedBox(height: 20),
-            Text('Classification Result: $_classificationResult'),
-            SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _diseases.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(_diseases[index]['name']),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DiseaseDetailScreen(id: _diseases[index]['id']),
-                        ),
-                      );
-                    },
-                  );
-                },
+        child: SingleChildScrollView( // Wrap with SingleChildScrollView
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _image == null ? const Text('No image selected.') : Image.file(_image!),
+              const SizedBox(height: 20),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                onPressed: classifyImage,
+                child: const Text('Classify Image'),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              Text('Classification Result: $_classificationResult'),
+              const SizedBox(height: 20),
+              // Wrap ListView.builder with a Container of limited height
+              SizedBox(
+                height: 200, // Set a fixed height for the list
+                child: ListView.builder(
+                  itemCount: _diseases.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(_diseases[index]['name']),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DiseaseDetailScreen(id: _diseases[index]['id']),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

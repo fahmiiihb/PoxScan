@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'splash_screen.dart';
 
-void main() => runApp(PoxScan());
+void main() => runApp(const PoxScan());
 
 class PoxScan extends StatelessWidget {
+  const PoxScan({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
